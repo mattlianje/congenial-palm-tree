@@ -9,18 +9,18 @@ setwd("C:/Users/matth/Desktop/shiny_tests")
 
 shinyUI(
     pageWithSidebar(
-    headerPanel("Sexyraba test"),
+    headerPanel("sexy scheduler"),
     
     sidebarPanel(
-      selectInput("Distribution", "Please select Distribution Type",
-                  choices=c("Normal", "Exponential")),
-      sliderInput("sampleSize", "Please Select Sample Size: ",
-                  min=100, max=5000, value=1000, step=100),
-      conditionalPanel(condition = "input.Distribution == 'Normal' ",
-                       textInput("mean", "Please select the mean", 10),
-                       textInput( "sd", "Please select the standard deviation", 3)),
-      conditionalPanel(condition = "input.Distribution == 'Exponential' ",
-                       textInput("lambda", "Please Select Eponential Lambda: ", 1)),
+      #selectInput("Distribution", "Please select Distribution Type",
+      #            choices=c("Normal", "Exponential")),
+      #sliderInput("sampleSize", "Please Select Sample Size: ",
+      #            min=100, max=5000, value=1000, step=100),
+      #conditionalPanel(condition = "input.Distribution == 'Normal' ",
+      #                 textInput("mean", "Please select the mean", 10),
+      #                 textInput( "sd", "Please select the standard deviation", 3)),
+      #conditionalPanel(condition = "input.Distribution == 'Exponential' ",
+      #                 textInput("lambda", "Please Select Eponential Lambda: ", 1)),
       textInput("address", h4("Your studio address"),
                       value = "Enter address")
     ),

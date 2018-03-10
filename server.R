@@ -1,13 +1,19 @@
 library(shiny)
 library(leaflet)
+library(ggmap)
 
 shinyServer(
   function(input, output, session){
+    
+    locationTest <- geocode("241 Combe Ave North York")
+    locationLon <- locationTest$lon
+    locationLat <- locationTest$lat
+    
     output$mymap <- renderLeaflet({
       leaflet() %>%
         addTiles() %>%
-        setView(lng = -79.3832, lat = 43.6532, zoom=12) %>%
-        addMarkers(lng = -79.3832, lat = 43.6532, popup = "City of Toronto")
+        setView(lng = locationLon, lat = locationLat, zoom=14) %>%
+        addMarkers(lng = locationLon, lat = locationLat, popup = "City of Toronto")
     })
     output$testPlot <- renderPlot({
       distType <- input$Distribution
