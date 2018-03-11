@@ -5,11 +5,13 @@ library(ggmap)
 shinyServer(
   function(input, output, session){
     
-    locationTest <- geocode("241 Combe Ave North York")
-    locationLon <- locationTest$lon
-    locationLat <- locationTest$lat
-    
     output$mymap <- renderLeaflet({
+      
+      getLocation <- input$address
+      userLocation <- geocode(getLocation)
+      locationLon <- userLocation$lon
+      locationLat <- userLocation$lat
+      
       leaflet() %>%
         addTiles() %>%
         setView(lng = locationLon, lat = locationLat, zoom=14) %>%

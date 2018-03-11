@@ -9,7 +9,7 @@ setwd("C:/Users/matth/Desktop/shiny_tests")
 
 shinyUI(
     pageWithSidebar(
-    headerPanel("sexy scheduler"),
+    headerPanel("saku laughter, saku fun"),
     
     sidebarPanel(
       #selectInput("Distribution", "Please select Distribution Type",
@@ -22,7 +22,7 @@ shinyUI(
       #conditionalPanel(condition = "input.Distribution == 'Exponential' ",
       #                 textInput("lambda", "Please Select Eponential Lambda: ", 1)),
       textInput("address", h4("Your studio address"),
-                      value = "Enter address")
+                      value = "20 Ridley Blvd")
     ),
     mainPanel(
       #plotOutput("testPlot"),
