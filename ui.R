@@ -19,7 +19,7 @@ shinyUI(
       selectInput("endTime", "Please select the time you end work",
                   choices=c("3 PM", "4 PM", "5 PM", "6 PM", "7 PM")),
       sliderInput("workDay", "Please select start/end times of your workday: ",
-                   min=1, max=23, value=c(9,20), step=0.5, post= " hrs", sep = ",", animate = TRUE),
+                   min=0, max=23, value=c(9,20), step=0.5, post= " hrs", sep = ",", animate = TRUE),
       #conditionalPanel(condition = "input.Distribution == 'Normal' ",
       #                 textInput("mean", "Please select the mean", 10),
       #                 textInput( "sd", "Please select the standard deviation", 3)),
