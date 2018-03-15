@@ -9,30 +9,39 @@ setwd("C:/Users/matth/Desktop/shiny_tests")
 
 shinyUI(
     pageWithSidebar(
-    headerPanel("saku laughter, saku fun"),
+    headerPanel(h2("protein, water, liquor"), windowTitle = "congenial palm tree"),
     
     sidebarPanel(
+      
+      # Not using these dd s for the moment nigs
+      
       #selectInput("Distribution", "Please select Distribution Type",
       #            choices=c("Normal", "Exponential")),
-      selectInput("startTime", "Please select the time you start working",
-                   choices=c("7 AM", "8 AM", "9 AM", "10 AM", "11 AM")),
-      selectInput("endTime", "Please select the time you end work",
-                  choices=c("3 PM", "4 PM", "5 PM", "6 PM", "7 PM")),
-      sliderInput("workDay", "Please select start/end times of your workday: ",
+      #selectInput("endTime", "Please select the time you end work",
+      #            choices=c("3 PM", "4 PM", "5 PM", "6 PM", "7 PM")),
+      
+      # This one is cooking 
+      h3("Persistence pays off"),
+      img(src = "sakufun.jpg", width = "100%"),
+      sliderInput("workDay", h4("Your work hours..."),
                    min=0, max=23, value=c(9,20), step=0.5, post= " hrs", sep = ",", animate = TRUE),
+      
+      # Boiler plate tests with basic R functions
       #conditionalPanel(condition = "input.Distribution == 'Normal' ",
       #                 textInput("mean", "Please select the mean", 10),
       #                 textInput( "sd", "Please select the standard deviation", 3)),
       #conditionalPanel(condition = "input.Distribution == 'Exponential' ",
       #                 textInput("lambda", "Please Select Eponential Lambda: ", 1)),
-      textInput("address", h4("Your studio address"),
-                      value = "Toronto")
+      
+      # textbox that grabs the current user location
+      
+      textInput("address", h4("Your address (GTA only)"),
+                      value = "Toronto"),
+      actionButton("do", "get map", icon("map"), style = "color: #ee7600; background-color: #deeff5")
     ),
     mainPanel(
       #plotOutput("testPlot"),
       leafletOutput("mymap")
-      #murder<-subset(crime, offense == "murder"),
-      #qmplot(lon, lat, data = murder, colour = I('red'), size = I(3), darken =.3)
     )
   )
 )
