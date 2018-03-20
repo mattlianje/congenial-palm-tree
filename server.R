@@ -7,6 +7,9 @@ library(lpSolve)
 library(plyr)
 library(geosphere)
 library(shinyjs)
+library(gdata)
+library(RCurl)
+library(XLConnect)
 
 shinyServer(function(input, output, session) {
   #data loading jobs
@@ -16,12 +19,22 @@ shinyServer(function(input, output, session) {
   pedestrianTraffic <<- read.csv("city_of_Toronto_pedestrian_traffic_open_data.csv", TRUE, ",")
   class(pedestrianTraffic)
   
+  #Test loading the data dynamically from the city of Toronto website
+  tmp = tempfile(fileext = ".xlsx")
+  download.file(url = "https://www.toronto.ca/ext/open_data/catalog/data_set_files/8hrVeh&PedVolume_6-Mar-2018.xlsx", destfile = tmp, mode = "wb")
+  webImport <<- readWorksheetFromFile(file = tmp, sheet = "Total TMM count", header = TRUE)
+  class(webImport)
+  colnames(webImport)[colnames(webImport) == "X8.Peak.Hr.Pedestrian.Volume"] <- "pedestrianVolume"
+  webImport = webImport[-c(3,5,6,10)]
+  print(webImport)
+  
   yogaGyms <<- read.csv("yoga_studio_locations_more.csv", TRUE, ",")
   class(yogaGyms)
   
   # runs after the do button (get map button) is clicked
   observeEvent(input$do, {
     output$mymap <- renderLeaflet({
+      withProgress(message = 'loading map...', value = 0, {
       getLocation <- input$address
       userLocation <- geocode(getLocation)
       
@@ -29,29 +42,14 @@ shinyServer(function(input, output, session) {
       locationLon <<- userLocation$lon
       locationLat <<- userLocation$lat
       
+      incProgress(1, message = "Cleaning up some data...")
       
-      #getMUserToHotspots <- function(i) {
-      #  mapdist(as.numeric(pedestrianTraffic[i, c ('Longitude', 'Latitude')]),
-      #         as.numeric(locationLon, locationLat))$m
-      #}
-      
-      
-      newPedestrianTraffic <- head(arrange(pedestrianTraffic, desc(pedestrianVolume)), n = 10)
+      newPedestrianTraffic <- head(arrange(webImport, desc(pedestrianVolume)), n = 10)
       class(newPedestrianTraffic)
       newPedestrianTraffic$distanceToUser <- NA
       
-      # print(newPedestrianTraffic)
       
-      
-      #from <- c(newPedestrianTraffic[5, "Longitude"], newPedestrianTraffic[5, "Latitude"])
-      #to <- c(locationLon, locationLat)
-      #test <- mapdist(from, to)
-      #test2 <- (test$m)
-      #print(test2)
-      #print(typeof(test2))
-      #newPedestrianTraffic[2, "distanceToUser"] = test2
-      #print(newPedestrianTraffic)
-      
+      incProgress(2, message = "running our top secret optimization algorithm...")
       
       for (i in 1:nrow(newPedestrianTraffic)) {
         from <- c(newPedestrianTraffic[i, "Longitude"], newPedestrianTraffic[i, "Latitude"])
@@ -62,26 +60,44 @@ shinyServer(function(input, output, session) {
         newPedestrianTraffic[i, "distanceToUser"] = test
       }
       
+      #print(webImport)
+      locations <- webImport[-c(1,2,3,6,7)]
+      class(locations)
+      locations2 <- locations[,c(2,1)]
+      class(locations2)
+      print(locations2)
+      
+      incProgress(3, message = "running our top secret algorithm...")
+      min.RSS <- function(data, par) {
+        with(data, sum(distm(locations2, par)))
+      }
+      
+      (result <- optim(par = c(locationLon, locationLat), min.RSS, data = locations2))
+      
       newPedestrianTraffic$dToUserXWeight <- newPedestrianTraffic$pedestrianVolume * newPedestrianTraffic$distanceToUser
       toMinimize <- sum(newPedestrianTraffic$dToUserXWeight)
       print(newPedestrianTraffic)
       cat("with the user long lat at first the value to minimize is", toMinimize)
       
-      # computational duplicate vars for the solver
-      # x <- locationLat
-      # y <- locationLon
+      cat("")
+      print(result$par[1])
+      print(result$par[2])
       
-      # print(newPedestrianTraffic)
-      # Write piece of function that optimizes user latlong such that he is closest to population hubs
-      # f <- function(a,b) sum(newPedestrianTraffic[i, "pedestrianVolume"] * distm(c(newPedestrianTraffic[i, "Longitude"], newPedestrianTraffic[i, "Latitude"]), c(a, b)))
-      # ymin <- optimize(f, c(x,y), tol = 0.0001, b=locationLat)
-      # print(ymin)
+      optimalLon <- result$par[1]
+      optimalLat <- result$par[2]
       
       icon.glyphicon <- makeAwesomeIcon(icon = 'flag',
                         markerColor = 'blue',
                         iconColor = 'black')
       userLocationRow <- data.frame(Name = 'Your Location', x = locationLon, y = locationLat)
+      bestLocationRow <- data.frame(Name = 'Best Location', x = optimalLon, y = optimalLat)
       yogaGyms <- rbind(yogaGyms, userLocationRow)
+      yogaGyms <- rbind(yogaGyms, bestLocationRow)
+    
+      #print(yogaGyms)
+      
+      print(typeof(optimalLon))
+      print(typeof(locationLon))
       
       # sets the color for the yoga gym markers
       
@@ -89,7 +105,11 @@ shinyServer(function(input, output, session) {
         sapply(yogaGyms$Name, function(Name) {
           if (Name == "Your Location") {
             "green"
-          } else {
+          }
+          else if (Name == "Best Location") {
+            "blue"
+          }
+          else {
             "beige"
           }
         })
@@ -97,8 +117,8 @@ shinyServer(function(input, output, session) {
       
       # changes the color of the pedestrian traffic points depending on magnitude of traffic
       
-      getTrafficColor <- function(pedestrianTraffic) {
-        sapply(pedestrianTraffic$pedestrianVolume, function(pedestrianVolume) {
+      getTrafficColor <- function(webImport) {
+        sapply(webImport$pedestrianVolume, function(pedestrianVolume) {
           if (pedestrianVolume <= 7500) {
             "red"
           }
@@ -125,6 +145,8 @@ shinyServer(function(input, output, session) {
         setView(lng = locationLon, lat = locationLat, zoom = 14) %>%
         addAwesomeMarkers(lng = ~ x, lat = ~ y, icon = icons, label = ~ as.character(Name))
       
+      
+      })
       # end of the render leaflet
     })
     

@@ -38,8 +38,8 @@ shinyUI(pageWithSidebar(
     
     textInput("address", h4("Your address (GTA only)"),
               value = "Yonge and Dundas"),
-    actionButton("do", "get map", icon("map")),#, style = "color: #ee7600"),
-    actionButton("refresh", "refresh", style = "color: #ee7600")
+    actionButton("do", "get map", icon("map"), style = "color: #6666ff"),
+    actionButton("refresh", "refresh", style = "color: #6666ff")
   ),
   mainPanel(#plotOutput("testPlot"),
     leafletOutput("mymap"))
