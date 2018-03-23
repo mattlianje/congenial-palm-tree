@@ -199,29 +199,11 @@ shinyServer(function(input, output, session) {
       print(newPedestrianTraffic)
       cat("with the user long lat at first the value to minimize is", toMinimize)
       incProgress(4, message = "Finishing up...")
-      cat("")
-      #print(result$par[1])
-      #print(result$par[2])
-      
-      #optimalLon <- result$par[1]
-      #optimalLat <- result$par[2]
       
       icon.glyphicon <- makeAwesomeIcon(icon = 'flag',
                         markerColor = 'blue',
                         iconColor = 'black')
      
-      
-      #userLocationRow <- data.frame(Name = 'Your Location', x = locationLon, y = locationLat)
-      #bestLocationRow <- data.frame(Name = 'Best Location', x = optimalLon, y = optimalLat)
-      
-      #yogaGyms <- rbind(yogaGyms, userLocationRow)
-      #yogaGyms <- rbind(yogaGyms, bestLocationRow)
-      #yogaGyms <- rbind(yogaGyms, maximizedLocation)
-      #print(yogaGyms)
-      
-      #print(typeof(optimalLon))
-      #print(typeof(locationLon))
-      
       # sets the color for the yoga gym markers
       
       getColor <- function(yogaGyms) {
@@ -275,8 +257,6 @@ shinyServer(function(input, output, session) {
         setView(lng = locationLon, lat = locationLat, zoom = 14) %>%
         addAwesomeMarkers(lng = ~ x, lat = ~ y, icon = icons, label = ~ as.character(Name))
       
-      
-      #print(googlePull)
       })
       # end of the render leaflet
     })
@@ -285,14 +265,7 @@ shinyServer(function(input, output, session) {
       addTiles() %>%
       addCircleMarkers(radius = ~ pedestrianVolume / 1000,lng = ~ Longitude,lat = ~ Latitude, weight = 5, color = "red", stroke = FALSE, fillOpacity = 0.3)
     
-    #Some Google Places API tests
-    #key <- 'AIzaSyB_d8paMHo6VkQ0XfwW9UznmOPyXdlJ_SI'
-    #res <- google_places(location = c(locationLon, locationLat),
-    #                     place_type = "yoga studio",
-    #                     radius = 20000,
-    #                     key = key)
-    #print(res)
-    # end of the on get map button click
+  
   })
   
   output$testPlot <- renderPlot({
