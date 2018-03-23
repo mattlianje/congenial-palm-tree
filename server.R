@@ -24,6 +24,7 @@ shinyServer(function(input, output, session) {
   class(pedestrianTraffic)
   
   #Test loading the data dynamically from the city of Toronto website
+  #### Only pull this xls if you have java on your machine. Else, hardcode a CSV ####
   tmp = tempfile(fileext = ".xlsx")
   download.file(url = "https://www.toronto.ca/ext/open_data/catalog/data_set_files/8hrVeh&PedVolume_6-Mar-2018.xlsx", destfile = tmp, mode = "wb")
   webImport <<- readWorksheetFromFile(file = tmp, sheet = "Total TMM count", header = TRUE)
