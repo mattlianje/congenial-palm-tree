@@ -25,7 +25,7 @@ shinyUI(pageWithSidebar(
     # This one is cooking
     h3("Persistence pays off"),
     #img(src = "sakufun.jpg", width = "100%"),
-    sliderInput("workDay", h4("Your work hours..."), min = 0, max = 23, value = c(9, 20), step = 0.5, post = " hrs", sep = ",", animate = TRUE),
+    #sliderInput("workDay", h4("Your work hours..."), min = 0, max = 23, value = c(9, 20), step = 0.5, post = " hrs", sep = ",", animate = TRUE),
     
     # Boiler plate tests with basic R functions
     #conditionalPanel(condition = "input.Distribution == 'Normal' ",
@@ -36,8 +36,11 @@ shinyUI(pageWithSidebar(
     
     # textbox that grabs the current user location
     
-    textInput("address", h4("Your address (GTA only)"),
+    textInput("locationType", h5("what type of business do you want to start"),
+              value = "yoga studio"),
+    textInput("address", h5("where in Toronto do you want to start your business"),
               value = "Yonge and Dundas"),
+    sliderInput("distConstraint", h5("Optimize within this distance (in km).."), min = 0, max = 5, value = 3, step = 0.25, post = " km", animate = TRUE),
     actionButton("do", "get map", icon("map"), style = "color: #6666ff"),
     actionButton("refresh", "refresh", style = "color: #6666ff")
   ),

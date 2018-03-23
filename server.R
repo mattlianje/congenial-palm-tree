@@ -10,6 +10,8 @@ library(shinyjs)
 library(gdata)
 library(RCurl)
 library(XLConnect)
+library(googleway)
+library(jsonlite)
 
 shinyServer(function(input, output, session) {
   #data loading jobs
@@ -28,13 +30,31 @@ shinyServer(function(input, output, session) {
   webImport = webImport[-c(3,5,6,10)]
   print(webImport)
   
+  key <- 'AIzaSyChVlEEFBjIaVbni1rakTQiPzGhdpcWtOc'
+  googlePull <- google_places(radar = TRUE, location = c(43.810242, -79.398503), radius = 5000, place_type = "gym", key = key)
+  yogaLon = googlePull$results$geometry$location$lng
+  yogaLat = googlePull$results$geometry$location$lat
+  
   yogaGyms <<- read.csv("yoga_studio_locations_more.csv", TRUE, ",")
   class(yogaGyms)
+  
+  #More Google Places API tests
+  
+  #key <- 'AIzaSyB_d8paMHo6VkQ0XfwW9UznmOPyXdlJ_SI'
+  #res <- google_places(location = c(-79.39679, 43.72624),
+  #                     place_type = "yoga",
+  #                     radius = 20000,
+  #                     key = key)
+  #print(typeof(res))
+  #res2 <- fromJSON(res, simplifyVector = TRUE,
+  #                 simplifyDataFrame = simplifyVector,
+  #                 simplifyMatrix = simplifyVector)
+  #print(res[3])
   
   # runs after the do button (get map button) is clicked
   observeEvent(input$do, {
     output$mymap <- renderLeaflet({
-      withProgress(message = 'loading map...', value = 0, {
+      withProgress(message = 'loading map...', value = 1, {
       getLocation <- input$address
       userLocation <- geocode(getLocation)
       
@@ -68,17 +88,52 @@ shinyServer(function(input, output, session) {
       print(locations2)
       
       incProgress(3, message = "running our top secret algorithm...")
+      constraint <- input$distConstraint
+      
+      #Minimization optimization
       min.RSS <- function(data, par) {
         with(data, sum(distm(locations2, par)))
       }
       
-      (result <- optim(par = c(locationLon, locationLat), min.RSS, data = locations2))
+      (result <- optim(par = c(locationLon, locationLat), 
+                       min.RSS,
+                       lower = c(locationLon - constraint*0.009, locationLat - constraint*0.009),
+                       upper = c(locationLon + constraint*0.009, locationLat + constraint*0.009),
+                       data = locations2,
+                       method = "BFGS"))
+      
+      yogaLocations = data.frame(x=yogaGyms$x,
+                                 y=yogaGyms$y)
+      
+      #Maximization optimization
+      
+      max.RSS <- function(data, par) {
+        with(data, sum(distm(yogaLocations, par)))
+      }
+      
+      (result2 <- optim(par = c(locationLon, locationLat), 
+                        max.RSS,
+                        lower = c(locationLon - constraint*0.3*0.009, locationLat - constraint*0.3*0.009),
+                        upper = c(locationLon + constraint*0.3*0.009, locationLat + constraint*0.3*0.009),
+                        control = list(fnscale = -1),
+                        data = yogaLocations,
+                        method = "BFGS"))
+      
+      print(result2$par[1])
+      print(result2$par[2])
+      
+      maximizedLon <- result2$par[1]
+      maximizedLat <- result2$par[2]
+      
+      maximizedLocation <- data.frame(Name = 'Maximized Location', x = maximizedLon, y = maximizedLat)
+      
+      
       
       newPedestrianTraffic$dToUserXWeight <- newPedestrianTraffic$pedestrianVolume * newPedestrianTraffic$distanceToUser
       toMinimize <- sum(newPedestrianTraffic$dToUserXWeight)
       print(newPedestrianTraffic)
       cat("with the user long lat at first the value to minimize is", toMinimize)
-      
+      incProgress(4, message = "Finishing up...")
       cat("")
       print(result$par[1])
       print(result$par[2])
@@ -91,9 +146,10 @@ shinyServer(function(input, output, session) {
                         iconColor = 'black')
       userLocationRow <- data.frame(Name = 'Your Location', x = locationLon, y = locationLat)
       bestLocationRow <- data.frame(Name = 'Best Location', x = optimalLon, y = optimalLat)
+      
       yogaGyms <- rbind(yogaGyms, userLocationRow)
       yogaGyms <- rbind(yogaGyms, bestLocationRow)
-    
+      yogaGyms <- rbind(yogaGyms, maximizedLocation)
       #print(yogaGyms)
       
       print(typeof(optimalLon))
@@ -108,6 +164,9 @@ shinyServer(function(input, output, session) {
           }
           else if (Name == "Best Location") {
             "blue"
+          }
+          else if(Name == "Maximized Location") {
+            "red"
           }
           else {
             "beige"
@@ -146,6 +205,7 @@ shinyServer(function(input, output, session) {
         addAwesomeMarkers(lng = ~ x, lat = ~ y, icon = icons, label = ~ as.character(Name))
       
       
+      print(googlePull)
       })
       # end of the render leaflet
     })
@@ -154,6 +214,13 @@ shinyServer(function(input, output, session) {
       addTiles() %>%
       addCircleMarkers(radius = ~ pedestrianVolume / 1000,lng = ~ Longitude,lat = ~ Latitude, weight = 5, color = "red", stroke = FALSE, fillOpacity = 0.3)
     
+    #Some Google Places API tests
+    #key <- 'AIzaSyB_d8paMHo6VkQ0XfwW9UznmOPyXdlJ_SI'
+    #res <- google_places(location = c(locationLon, locationLat),
+    #                     place_type = "yoga studio",
+    #                     radius = 20000,
+    #                     key = key)
+    #print(res)
     # end of the on get map button click
   })
   
