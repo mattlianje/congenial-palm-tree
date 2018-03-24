@@ -6,14 +6,17 @@ library(magrittr)
 library(lpSolve)
 library(plyr)
 library(geosphere)
-library(shinyjs)
+#library(shinyjs)
 library(gdata)
 library(RCurl)
 library(XLConnect)
 library(googleway)
 library(jsonlite)
 library(rsconnect)
-#rsconnect::deployApp('C:/Users/matth/Desktop/shiny_tests')
+rsconnect::setAccountInfo(name='matthieu-court',
+                          token='E9BF06E0309F2053A73CC5B1DFF14E07',
+                          secret='gpBRs12P0wxm+BdFawH03pek1ZQlsbWyYbiPqZgl')
+#rsconnect::deployApp()
 
 shinyServer(function(input, output, session) {
   #data loading jobs
@@ -52,23 +55,19 @@ shinyServer(function(input, output, session) {
         # Globalized instead of a subclass implementation to use on multiple layers of the map
         locationLon <<- userLocation$lon
         locationLat <<- userLocation$lat
-        
         locationType <- input$locationType
-        key <- 'AIzaSyChVlEEFBjIaVbni1rakTQiPzGhdpcWtOc'
-        googlePull <<- google_places(radar = TRUE, location = c(locationLat, locationLon), radius = 500, keyword = locationType, key = key)
-        yogaLon = googlePull$results$geometry$location$lng
-        yogaLat = googlePull$results$geometry$location$lat
         
+        # Make the Google Places API call and clean up the results
+        key <- 'AIzaSyChVlEEFBjIaVbni1rakTQiPzGhdpcWtOc'
+        googlePull <<- google_places(radar = TRUE, location = c(locationLat, locationLon), radius = (input$distConstraint)*1000, keyword = locationType, key = key)
         cleanGooglePull <- googlePull$results
         cleanGooglePull = cleanGooglePull[-c(3,4)]
         cleanGooglePull = cleanGooglePull[c(2,1)]
-        
         class(cleanGooglePull)
-        colnames(cleanGooglePull)[colnames(cleanGooglePull) == "geometry.location.lng"] <- "x"
-        colnames(cleanGooglePull)[colnames(cleanGooglePull) == "geometry.location.lat"] <- "y"
+      
         colnames(cleanGooglePull)[colnames(cleanGooglePull) == "id"] <- "Name"
         
-        cleanGooglePull$Name <- "Rival"
+        cleanGooglePull$Name <- "Rival Location"
         
         Name <- cleanGooglePull$Name
         x <- googlePull$results$geometry$location$lng
@@ -89,44 +88,61 @@ shinyServer(function(input, output, session) {
       
       incProgress(2, message = "running our top secret optimization algorithm...")
       
-      for (i in 1:nrow(newPedestrianTraffic)) {
-        from <- c(newPedestrianTraffic[i, "Longitude"], newPedestrianTraffic[i, "Latitude"])
+      #for (i in 1:nrow(newPedestrianTraffic)) {
+      #  from <- c(newPedestrianTraffic[i, "Longitude"], newPedestrianTraffic[i, "Latitude"])
+      #  to <- c(locationLon, locationLat)
+      #  test <- distm(from, to, fun = distHaversine)
+      #  test2 <- (test)
+      #  
+      #  newPedestrianTraffic[i, "distanceToUser"] = test
+      #}
+      
+      for (i in 1:nrow(webImport)) {
+        from <- c(webImport[i, "Longitude"], webImport[i, "Latitude"])
         to <- c(locationLon, locationLat)
         test <- distm(from, to, fun = distHaversine)
         test2 <- (test)
         
-        newPedestrianTraffic[i, "distanceToUser"] = test
+        webImport[i, "distanceToUser"] = test
       }
       
-      #print(webImport)
+      webImport <- subset(webImport, distanceToUser < (input$distConstraint * 1000))
+      print(webImport)
       locations <- webImport[-c(1,2,3,6,7)]
       class(locations)
       locations2 <- locations[,c(2,1)]
       class(locations2)
-      #print(locations2)
+      
+      
+      locations3 = data.frame(locations2)
+      locations3$pedestrianVolume = webImport$pedestrianVolume
+      print("locations 3 is###")
+      print(locations3)
       
       incProgress(3, message = "running our top secret algorithm...")
       constraint <- input$distConstraint
       
+      # First we grab what type of optimization the user wants
       optimType <- input$optimType
       
       userLocationRow <- data.frame(Name = 'Your Original Location', x = locationLon, y = locationLat)
-     # yogaGyms <- rbind(yogaGyms, userLocationRow)
       
       yogaLocations = data.frame(x=yogaGyms$x,
                                  y=yogaGyms$y)
       
-      if(optimType == "Minimize Dist. from Popular Spots"){
+      #### OPTIMIZATION SYSTEMS ####
+      # User just wants to be close to pedestrian hot spots in his neighbourhood
+      if(optimType == "Close to popular spots"){
         
         min.RSS <- function(data, par) {
-          with(data, sum(distm(locations2, par)))
+          with(data, sum(locations3$pedestrianVolume * distm(cbind(locations3$Longitude, locations3$Latitude), par)))
         }
         
         (result <- optim(par = c(locationLon, locationLat), 
                          min.RSS,
                          lower = c(locationLon - constraint*0.009, locationLat - constraint*0.009),
                          upper = c(locationLon + constraint*0.009, locationLat + constraint*0.009),
-                         data = locations2,
+                         data = locations3,
                          method = "BFGS"))
         
         minimizedLon <- result$par[1]
@@ -136,7 +152,7 @@ shinyServer(function(input, output, session) {
         yogaGyms <- rbind(yogaGyms, minimizedLocationRow)
         
         
-      }else if(optimType == "Maximize Dist. from Competitors"){
+      }else if(optimType == "Far away from my rivals"){
         
         max.RSS <- function(data, par) {
           with(data, sum(distm(yogaLocations, par)))
@@ -158,8 +174,11 @@ shinyServer(function(input, output, session) {
         yogaGyms <- rbind(yogaGyms, maximizedLocationRow)
         
       }else{
+        
+      ### Combo Solver ###
+        
         min.RSS <- function(data, par) {
-          with(data, sum(distm(locations2, par)))
+          with(data, sum(locations3$pedestrianVolume * distm(cbind(locations3$Longitude, locations3$Latitude), par)))
         }
         
         (result3 <- optim(par = c(locationLon, locationLat), 
@@ -219,7 +238,7 @@ shinyServer(function(input, output, session) {
             "red"
             
           } else if (Name == "Combo-Optimized Location"){
-            "white"
+            "purple"
             
           } else {
             "beige"
